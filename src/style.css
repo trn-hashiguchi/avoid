@@ -1,16 +1,3 @@
-:root {
-    --bg0: #05060a;
-    --bg1: #0b0e14;
-    --fg: #e9f1ff;
-    --neon-cyan: #00e5ff;
-    --neon-magenta: #ff2d7a;
-    --neon-lime: #a0ff1a;
-}
-
-* {
-    box-sizing: border-box;
-}
-
 html,
 body,
 #app {
@@ -19,12 +6,11 @@ body,
 }
 
 body {
-    background:
-        radial-gradient(1200px 600px at 50% -10%, #101525 0%, transparent 60%),
-        linear-gradient(180deg, var(--bg0), var(--bg1));
-    color: var(--fg);
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    background-color: #f0f8ff; /* AliceBlue */
+    color: #333;
+    font-family: "Kiwi Maru", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
         Arial, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+    overflow: hidden;
 }
 
 canvas {

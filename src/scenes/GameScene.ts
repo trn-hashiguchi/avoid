@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 
-type ObKind = 'drop' | 'diag' | 'sine';
+type ObKind = 'drop' | 'diag' | 'sine' | 'ghost' | 'banana';
 
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -47,9 +47,9 @@ export class GameScene extends Phaser.Scene {
       .setAlpha(0.6);
 
     // プレイヤー
-    this.player = this.physics.add.sprite(width / 2, height - 80, 'player');
-    this.player.setCollideWorldBounds(true);
-    this.player.setCircle(16, 8, 8); // おおざっぱな当たり判定（丸）
+    this.player = this.physics.add.sprite(width / 2, height - 80, 'player-cat');
+    this.player.setScale(0.15).setCollideWorldBounds(true);
+    this.player.setCircle(200, this.player.width/2 - 200, this.player.height/2 - 200); // 猫の見た目に合わせて調整
     this.player.setDepth(10);
 
     // グループ
@@ -107,6 +107,12 @@ export class GameScene extends Phaser.Scene {
         const freq = s.getData('freq') as number;
         const t = (this.time.now - t0) / 1000;
         s.setVelocityX(Math.sin(t * Math.PI * 2 * freq) * amp);
+      }
+
+      if (kind === 'ghost') {
+        // プレイヤーをゆっくり追尾
+        const targetVx = Math.sign(this.player.x - s.x) * 60;
+        s.body.velocity.x = Phaser.Math.Linear(s.body.velocity.x, targetVx, 0.05);
       }
 
       // 画面外で掃除
@@ -179,12 +185,19 @@ export class GameScene extends Phaser.Scene {
   }
 
   private pickKind(t: number): ObKind {
-    // 時間が経つほど s i n e / diag が増える
-    const pSine = Phaser.Math.Clamp(0.1 + t * 0.02, 0.1, 0.55);
-    const pDiag = Phaser.Math.Clamp(0.15 + t * 0.02, 0.15, 0.55);
+    // 時間経過で高難易度の障害物が増える
+    // もっと早い段階で新しい障害物を登場させるように調整
+    const pGhost = Phaser.Math.Clamp(0.01 * (t - 3), 0, 0.25);  // 15秒後から出現、増加率UP
+    const pBanana = Phaser.Math.Clamp(0.02 * (t - 1), 0, 0.30);   // 5秒後から出現、増加率UP
+    const pSine = Phaser.Math.Clamp(0.1 + 0.005 * t, 0.1, 0.30);
+    const pDiag = Phaser.Math.Clamp(0.15 + 0.005 * t, 0.15, 0.30);
+
     const r = Math.random();
-    if (r < pSine) return 'sine';
-    if (r < pSine + pDiag) return 'diag';
+    let p = 0;
+    if (r < (p += pGhost)) return 'ghost';
+    if (r < (p += pBanana)) return 'banana';
+    if (r < (p += pSine)) return 'sine';
+    if (r < (p += pDiag)) return 'diag';
     return 'drop';
   }
 
@@ -196,8 +209,7 @@ export class GameScene extends Phaser.Scene {
       const s = this.obstacles.create(x, -40, 'ob-rect') as Phaser.Physics.Arcade.Sprite;
       s.setVelocity(0, vy);
       s.setData('kind', 'drop');
-      s.setCircle(10, 2, 22);
-      s.setRotation(Math.PI * 0.5 * (Math.random() > 0.5 ? 1 : -1));
+      s.setCircle(24, 0, 4); // 新テクスチャ用の当たり判定
       return;
     }
 
@@ -209,7 +221,7 @@ export class GameScene extends Phaser.Scene {
       const vx = (fromLeft ? 1 : -1) * (vy * (0.5 + Math.random() * 0.4));
       s.setVelocity(vx, vy * (0.6 + Math.random() * 0.3));
       s.setData('kind', 'diag');
-      s.setCircle(10, 2, 22);
+      s.setCircle(24, 0, 4); // 新テクスチャ用の当たり判定
       s.setAngle(fromLeft ? 25 : -25);
       return;
     }
@@ -223,6 +235,30 @@ export class GameScene extends Phaser.Scene {
     s.setData('amp', Phaser.Math.Between(120, 220));
     s.setData('freq', Phaser.Math.FloatBetween(0.6, 1.3));
     s.setCircle(10, 0, 0);
+
+    if (kind === 'banana') {
+      const fromLeft = Math.random() < 0.5;
+      const x = fromLeft ? -30 : w + 30;
+      const y = Phaser.Math.Between(h * 0.2, h * 0.6);
+      const s = this.obstacles.create(x, y, 'ob-banana') as Phaser.Physics.Arcade.Sprite;
+      const vx = (fromLeft ? 1 : -1) * (vy * (0.4 + Math.random() * 0.3));
+      s.setVelocity(vx, vy * (0.5 + Math.random() * 0.2));
+      s.setAngularVelocity((fromLeft ? 1 : -1) * 200);
+      s.setScale(1.5);
+      s.setData('kind', 'banana');
+      s.setBodySize(24, 12); // 当たり判定を小さく
+      return;
+    }
+
+    if (kind === 'ghost') {
+      const x = Phaser.Math.Between(w * 0.2, w * 0.8);
+      const s = this.obstacles.create(x, -30, 'ob-ghost') as Phaser.Physics.Arcade.Sprite;
+      s.setVelocity(0, vy * 0.5); // ゆっくり降下
+      s.setScale(1.5);
+      s.setData('kind', 'ghost');
+      s.setCircle(21, 3, 3); // サイズに合わせて当たり判定を調整
+      return;
+    }
   }
 
   private spawnLife(vy: number) {
@@ -260,7 +296,7 @@ export class GameScene extends Phaser.Scene {
   private onGetLife = (_player: Phaser.GameObjects.GameObject, item: Phaser.GameObjects.GameObject) => {
     item.destroy();
     if (this.lives < this.maxLives) this.lives += 1;
-    this.addSparkle(this.player.x, this.player.y, 0xa0ff1a);
+    this.addSparkle(this.player.x, this.player.y, 0xfbc02d);
   };
 
   private addSparkle(x: number, y: number, color: number) {
@@ -273,8 +309,8 @@ export class GameScene extends Phaser.Scene {
   // ===== HUD / タイトル / リザルト =====
   private addHUD() {
     const w = this.scale.width;
-    const tTime = this.add.text(16, 12, '00.00', { fontFamily: 'Orbitron, sans-serif', fontSize: '28px', color: '#e9f1ff' }).setDepth(20);
-    const tLife = this.add.text(w - 16, 12, 'LIFE: 1', { fontFamily: 'Orbitron, sans-serif', fontSize: '20px', color: '#a0ff1a' }).setOrigin(1, 0).setDepth(20);
+    const tTime = this.add.text(16, 12, '00.00', { fontFamily: 'Kiwi Maru, sans-serif', fontSize: '28px', color: '#2c3e50' }).setDepth(20);
+    const tLife = this.add.text(w - 16, 12, 'LIFE: 1', { fontFamily: 'Kiwi Maru, sans-serif', fontSize: '20px', color: '#e91e63' }).setOrigin(1, 0).setDepth(20);
 
     this.events.on('hud:update', (ms: number, lives: number) => {
       tTime.setText((ms / 1000).toFixed(2) + 's');
@@ -284,20 +320,20 @@ export class GameScene extends Phaser.Scene {
 
   private showTitle() {
     const { width: w, height: h } = this.scale;
-    const overlay = this.add.rectangle(0, 0, w, h, 0x000000, 0.35).setOrigin(0).setDepth(30);
+    const overlay = this.add.rectangle(0, 0, w, h, 0xffffff, 0).setOrigin(0).setDepth(30);
     const title = this.add.text(w / 2, h * 0.34, '避けるだけ.com', {
-      fontFamily: 'Orbitron, sans-serif',
+      fontFamily: 'Kiwi Maru, sans-serif',
       fontSize: '48px',
-      color: '#00e5ff'
+      color: '#304ffe'
     }).setOrigin(0.5).setDepth(30);
     const sub = this.add.text(w / 2, h * 0.46, '左右で避けろ。生き延びろ。', {
-      fontFamily: 'Orbitron, sans-serif', fontSize: '18px', color: '#e9f1ff'
+      fontFamily: 'Kiwi Maru, sans-serif', fontSize: '18px', color: '#555555'
     }).setOrigin(0.5).setDepth(30);
     const how = this.add.text(w / 2, h * 0.58, '← → / A D / 画面タップ', {
-      fontFamily: 'Orbitron, sans-serif', fontSize: '16px', color: '#a0ff1a'
+      fontFamily: 'Kiwi Maru, sans-serif', fontSize: '16px', color: '#ff9800'
     }).setOrigin(0.5).setDepth(30);
     const press = this.add.text(w / 2, h * 0.70, 'クリック / タップ / スペース で開始', {
-      fontFamily: 'Orbitron, sans-serif', fontSize: '20px', color: '#ff2d7a'
+      fontFamily: 'Kiwi Maru, sans-serif', fontSize: '20px', color: '#e91e63'
     }).setOrigin(0.5).setDepth(30);
 
     const start = () => {
@@ -314,20 +350,20 @@ export class GameScene extends Phaser.Scene {
   private showGameOver(finalMs: number, bestMs: number) {
     const { width: w, height: h } = this.scale;
 
-    const overlay = this.add.rectangle(0, 0, w, h, 0x000000, 0.5).setOrigin(0).setDepth(40);
+    const overlay = this.add.rectangle(0, 0, w, h, 0x000000, 0.6).setOrigin(0).setDepth(40);
     const title = this.add.text(w / 2, h * 0.38, 'GAME OVER', {
-      fontFamily: 'Orbitron, sans-serif',
+      fontFamily: 'Kiwi Maru, sans-serif',
       fontSize: '48px',
-      color: '#ff2d7a'
+      color: '#d32f2f'
     }).setOrigin(0.5).setDepth(40);
 
     const score = this.add.text(w / 2, h * 0.50,
       `TIME  ${ (finalMs/1000).toFixed(2) }s\nBEST  ${ (bestMs/1000).toFixed(2) }s`,
-      { fontFamily: 'Orbitron, sans-serif', fontSize: '22px', color: '#e9f1ff', align: 'center' }
+      { fontFamily: 'Kiwi Maru, sans-serif', fontSize: '22px', color: '#ffffff', align: 'center' }
     ).setOrigin(0.5).setDepth(40);
 
     const retry = this.add.text(w / 2, h * 0.64, 'もう一度（R / クリック / タップ）', {
-      fontFamily: 'Orbitron, sans-serif', fontSize: '20px', color: '#00e5ff'
+      fontFamily: 'Kiwi Maru, sans-serif', fontSize: '20px', color: '#ffffff'
     }).setOrigin(0.5).setDepth(40);
 
     const restart = () => {
@@ -353,7 +389,7 @@ export class GameScene extends Phaser.Scene {
 
     // 左矢印（三角形）
     const leftArrow = this.add.graphics()
-      .fillStyle(0xffffff, 0.8)
+      .fillStyle(0x1976d2, 0.9)
       .fillTriangle(pad + size, y - size / 2, pad + size, y + size / 2, pad, y)
       .setDepth(35)
       .setInteractive(leftHitArea, Phaser.Geom.Circle.Contains);
@@ -364,7 +400,7 @@ export class GameScene extends Phaser.Scene {
 
     // 右矢印（三角形）
     const rightArrow = this.add.graphics()
-      .fillStyle(0xffffff, 0.8)
+      .fillStyle(0x1976d2, 0.9)
       .fillTriangle(width - pad - size, y - size / 2, width - pad - size, y + size / 2, width - pad, y)
       .setDepth(35)
       .setInteractive(rightHitArea, Phaser.Geom.Circle.Contains);
