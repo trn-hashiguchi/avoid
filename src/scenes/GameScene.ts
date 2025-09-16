@@ -61,11 +61,9 @@ export class GameScene extends Phaser.Scene {
     this.keyA = this.input.keyboard.addKey('A');
     this.keyD = this.input.keyboard.addKey('D');
 
-    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      const left = p.x < this.cameras.main.width / 2;
-      this.leftTouch = left;
-      this.rightTouch = !left;
-    });
+    this.drawControlArrows();
+
+    // 画面外でポインターを離したときも追従
     this.input.on('pointerup', () => {
       this.leftTouch = this.rightTouch = false;
     });
@@ -341,5 +339,38 @@ export class GameScene extends Phaser.Scene {
 
     this.input.keyboard.once('keydown-R', restart);
     this.input.once('pointerdown', restart);
+  }
+
+  private drawControlArrows() {
+    const { width, height } = this.scale;
+    const pad = 32;
+    const size = 56; // 大きくした
+    const y = height - pad - size / 2;
+
+    // ヒットエリア用の円
+    const leftHitArea = new Phaser.Geom.Circle(pad + size / 2, y, size * 1.2);
+    const rightHitArea = new Phaser.Geom.Circle(width - pad - size / 2, y, size * 1.2);
+
+    // 左矢印（三角形）
+    const leftArrow = this.add.graphics()
+      .fillStyle(0xffffff, 0.8)
+      .fillTriangle(pad + size, y - size / 2, pad + size, y + size / 2, pad, y)
+      .setDepth(35)
+      .setInteractive(leftHitArea, Phaser.Geom.Circle.Contains);
+
+    leftArrow.on('pointerdown', () => { this.leftTouch = true; });
+    leftArrow.on('pointerup', () => { this.leftTouch = false; });
+    leftArrow.on('pointerout', () => { this.leftTouch = false; });
+
+    // 右矢印（三角形）
+    const rightArrow = this.add.graphics()
+      .fillStyle(0xffffff, 0.8)
+      .fillTriangle(width - pad - size, y - size / 2, width - pad - size, y + size / 2, width - pad, y)
+      .setDepth(35)
+      .setInteractive(rightHitArea, Phaser.Geom.Circle.Contains);
+
+    rightArrow.on('pointerdown', () => { this.rightTouch = true; });
+    rightArrow.on('pointerup', () => { this.rightTouch = false; });
+    rightArrow.on('pointerout', () => { this.rightTouch = false; });
   }
 }
