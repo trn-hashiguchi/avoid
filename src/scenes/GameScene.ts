@@ -48,8 +48,8 @@ export class GameScene extends Phaser.Scene {
 
     // プレイヤー
     this.player = this.physics.add.sprite(width / 2, height - 80, 'player-cat');
-    this.player.setScale(0.15).setCollideWorldBounds(true);
-    this.player.setCircle(200, this.player.width/2 - 200, this.player.height/2 - 200); // 猫の見た目に合わせて調整
+    this.player.setScale(0.12).setCollideWorldBounds(true); // 0.15から20%縮小
+    this.player.setCircle(160, this.player.width/2 - 160, this.player.height/2 - 160); // スケールに合わせて当たり判定も縮小
     this.player.setDepth(10);
 
     // グループ
@@ -186,10 +186,10 @@ export class GameScene extends Phaser.Scene {
 
   private pickKind(t: number): ObKind {
     // 時間経過で高難易度の障害物が増える
-    // もっと早い段階で新しい障害物を登場させるように調整
-    const pGhost = Phaser.Math.Clamp(0.01 * (t - 3), 0, 0.25);  // 15秒後から出現、増加率UP
-    const pBanana = Phaser.Math.Clamp(0.02 * (t - 1), 0, 0.30);   // 5秒後から出現、増加率UP
-    const pSine = Phaser.Math.Clamp(0.1 + 0.005 * t, 0.1, 0.30);
+    // sine（怒った顔）と ghost（おばけ）の出現頻度を入れ替え
+    const pSine = Phaser.Math.Clamp(0.01 * (t - 15), 0, 0.25);  // 旧ghostの確率
+    const pBanana = Phaser.Math.Clamp(0.02 * (t - 5), 0, 0.30);   // 5秒後から出現、増加率UP
+    const pGhost = Phaser.Math.Clamp(0.1 + 0.005 * t, 0.1, 0.30);   // 旧sineの確率
     const pDiag = Phaser.Math.Clamp(0.15 + 0.005 * t, 0.15, 0.30);
 
     const r = Math.random();
@@ -217,7 +217,7 @@ export class GameScene extends Phaser.Scene {
       const fromLeft = Math.random() < 0.5;
       const x = fromLeft ? -30 : w + 30;
       const y = Phaser.Math.Between(40, h * 0.5);
-      const s = this.obstacles.create(x, y, 'ob-rect') as Phaser.Physics.Arcade.Sprite;
+      const s = this.obstacles.create(x, y, 'ob-ghost') as Phaser.Physics.Arcade.Sprite;
       const vx = (fromLeft ? 1 : -1) * (vy * (0.5 + Math.random() * 0.4));
       s.setVelocity(vx, vy * (0.6 + Math.random() * 0.3));
       s.setData('kind', 'diag');

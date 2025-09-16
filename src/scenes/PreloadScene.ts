@@ -7,16 +7,6 @@ export class PreloadScene extends Phaser.Scene {
 
   preload() {
     this.load.image('player-cat', 'images/cat.png');
-    this.load.image('ob-born', 'images/obstacles/born.png');
-  }
-
-  create() {
-    this.createGeneratedTextures();
-    this.scene.start('Game');
-  }
-
-  preload() {
-    this.load.image('player-cat', 'images/cat.png');
   }
 
   create() {
@@ -86,7 +76,7 @@ export class PreloadScene extends Phaser.Scene {
 
     // 障害物（おばけ）
     g.clear();
-    g.fillStyle(0xffffff, 0.9);
+    g.fillStyle(0xff69b4, 0.9); // ピンクに変更
     g.beginPath();
     g.moveTo(4, 30);
     g.lineTo(4, 12);
